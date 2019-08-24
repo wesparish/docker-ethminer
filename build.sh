@@ -1,10 +1,23 @@
 #!/bin/bash
 
-VARIANT_LIST=(amd nvidia)
+registry=${1:-wesparish}
+imagename=ethminer
+imagename=${2:-$imagename}
 
-for variant in ${VARIANT_LIST[@]}; do
-  echo "*** BUILDING $variant ***"
-  pushd $variant
-  ./build.sh
-  popd
+privateRegistry=${3:-nexus-jamie-docker.elastiscale.net}
+
+for dockerfile in $(find  -name Dockerfile); do
+  versionvariant=$(dirname $dockerfile | sed -e 's|^./||g' -e 's|/|-|g')
+  echo Building variant: $versionvariant
+  echo docker build -t $registry/${imagename}:${versionvariant} $(dirname $dockerfile)
+  docker build -t $registry/${imagename}:$versionvariant $(dirname $dockerfile)
+  echo docker push $registry/${imagename}:${versionvariant}
+  docker push $registry/${imagename}:$versionvariant
+
+  if [ -n $privateRegistry ]; then
+    echo docker tag $registry/${imagename}:${versionvariant} ${privateRegistry}/${imagename}:${versionvariant}
+    docker tag $registry/${imagename}:$versionvariant ${privateRegistry}/${imagename}:$versionvariant
+    echo docker push ${privateRegistry}/${imagename}:${versionvariant}
+    docker push ${privateRegistry}/${imagename}:$versionvariant
+  fi
 done
